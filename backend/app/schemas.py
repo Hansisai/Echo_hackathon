@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from datetime import datetime
 
 # --- Cities ---
@@ -22,15 +22,6 @@ class CityResponse(CityBase):
         from_attributes = True
 
 # --- Policies ---
-class PolicyParamSchema(BaseModel):
-    key: str
-    label: str
-    min: float
-    max: float
-    default: float
-    step: float
-    unit: str
-
 class PolicyResponse(BaseModel):
     id: str
     name: str
@@ -39,14 +30,9 @@ class PolicyResponse(BaseModel):
     max_value: float
     default_value: float
     unit: str
-    is_ai_generated: bool = False
-    params: Optional[List[PolicyParamSchema]] = None
 
     class Config:
         from_attributes = True
-
-class PolicyGenerateRequest(BaseModel):
-    prompt: str = Field(..., min_length=3, max_length=300, description="Free-text description of the new policy idea to auto-generate")
 
 # --- Simulation Run ---
 class SimulationRunRequest(BaseModel):

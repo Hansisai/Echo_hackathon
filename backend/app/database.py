@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from backend.app.models import Base, City, Policy
 
@@ -20,27 +20,9 @@ def get_db():
     finally:
         db.close()
 
-def _run_lightweight_migrations():
-    """
-    SQLAlchemy's create_all() only creates missing tables, not missing columns
-    on tables that already exist. Since the shipped database.db pre-dates the
-    AI-generated policy columns, patch them in with ALTER TABLE if absent.
-    """
-    inspector = inspect(engine)
-    if "policies" not in inspector.get_table_names():
-        return
-    existing_cols = {col["name"] for col in inspector.get_columns("policies")}
-    with engine.begin() as conn:
-        if "is_ai_generated" not in existing_cols:
-            conn.execute(text("ALTER TABLE policies ADD COLUMN is_ai_generated BOOLEAN NOT NULL DEFAULT 0"))
-        if "engine_config" not in existing_cols:
-            conn.execute(text("ALTER TABLE policies ADD COLUMN engine_config TEXT"))
-
 def init_db():
     # Create all tables if they don't exist
     Base.metadata.create_all(bind=engine)
-    # Patch any missing columns on tables that already existed on disk
-    _run_lightweight_migrations()
     
     db = SessionLocal()
     try:

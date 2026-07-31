@@ -1,52 +1,6 @@
 import json
 import math
 
-def _compute_base_scores(city_data: dict) -> dict:
-    """
-    Establishes base index values (0-100 scale) for the 5 sectors from raw city data.
-    Shared by both the hardcoded built-in policies and the generic AI-generated policy engine.
-    """
-    transit = city_data.get("transit_share", 20.0)
-    commute = city_data.get("avg_commute_dist", 15.0)
-    co2 = city_data.get("co2_baseline", 8.0)
-    aqi = city_data.get("aqi_baseline", 100)
-    income = city_data.get("median_income", 50000.0)
-    health = city_data.get("health_index", 60.0)
-    budget = city_data.get("municipal_budget", 1000.0)
-    satisfaction = city_data.get("satisfaction_baseline", 50.0)
-
-    base_economy = min(100.0, max(10.0, (income / 80000.0) * 50 + (budget / 5000.0) * 30))
-    base_environment = min(100.0, max(10.0, (1 - (co2 / 20.0)) * 40 + (1 - (aqi / 300.0)) * 40))
-    base_mobility = min(100.0, max(10.0, transit * 0.8 + (1 - (commute / 30.0)) * 30))
-    base_equity = min(100.0, max(10.0, (income / 80000.0) * 30 + transit * 0.5 + satisfaction * 0.2))
-    base_health = health
-
-    return {
-        "economy": round(base_economy, 1),
-        "environment": round(base_environment, 1),
-        "mobility": round(base_mobility, 1),
-        "equity": round(base_equity, 1),
-        "health": round(base_health, 1)
-    }
-
-def _build_projections(base_scores: dict, deltas: dict) -> list:
-    """Generates the shared 6-point (year 0-5) projection timeline from base scores + linear deltas."""
-    projections = []
-    for year in range(6):
-        coef = year / 5.0
-        fluct_eco = math.sin(year * 1.2) * 0.6
-        fluct_env = math.cos(year * 0.9) * 0.5
-
-        projections.append({
-            "year": year,
-            "economy": round(min(95.0, max(10.0, base_scores["economy"] + (deltas["economy"] * coef) + fluct_eco)), 1),
-            "environment": round(min(95.0, max(10.0, base_scores["environment"] + (deltas["environment"] * coef) + fluct_env)), 1),
-            "mobility": round(min(95.0, max(10.0, base_scores["mobility"] + (deltas["mobility"] * coef))), 1),
-            "equity": round(min(95.0, max(10.0, base_scores["equity"] + (deltas["equity"] * coef))), 1),
-            "health": round(min(95.0, max(10.0, base_scores["health"] + (deltas["health"] * coef))), 1),
-        })
-    return projections
-
 def calculate_simulation(city_data: dict, policy_id: str, parameters: dict) -> dict:
     """
     Executes the quantitative policy simulation engine.
@@ -56,7 +10,31 @@ def calculate_simulation(city_data: dict, policy_id: str, parameters: dict) -> d
         - ripple_graph: Node-link schema for causal flow visualization
     """
     # 1. Establish base index values (0-100 scale) from city data
-    base_scores = _compute_base_scores(city_data)
+    pop = city_data.get("population", 1000000)
+    transit = city_data.get("transit_share", 20.0)
+    commute = city_data.get("avg_commute_dist", 15.0)
+    co2 = city_data.get("co2_baseline", 8.0)
+    aqi = city_data.get("aqi_baseline", 100)
+    income = city_data.get("median_income", 50000.0)
+    health = city_data.get("health_index", 60.0)
+    budget = city_data.get("municipal_budget", 1000.0)
+    satisfaction = city_data.get("satisfaction_baseline", 50.0)
+
+    # Base calculations mapping stats to 0-100 index scores
+    base_economy = min(100.0, max(10.0, (income / 80000.0) * 50 + (budget / 5000.0) * 30))
+    base_environment = min(100.0, max(10.0, (1 - (co2 / 20.0)) * 40 + (1 - (aqi / 300.0)) * 40))
+    base_mobility = min(100.0, max(10.0, transit * 0.8 + (1 - (commute / 30.0)) * 30))
+    base_equity = min(100.0, max(10.0, (income / 80000.0) * 30 + transit * 0.5 + satisfaction * 0.2))
+    base_health = health
+
+    # Sector base scores dictionary
+    base_scores = {
+        "economy": round(base_economy, 1),
+        "environment": round(base_environment, 1),
+        "mobility": round(base_mobility, 1),
+        "equity": round(base_equity, 1),
+        "health": round(base_health, 1)
+    }
 
     # 2. Apply policy sliders coefficients
     deltas = {"economy": 0.0, "environment": 0.0, "mobility": 0.0, "equity": 0.0, "health": 0.0}
@@ -222,83 +200,21 @@ def calculate_simulation(city_data: dict, policy_id: str, parameters: dict) -> d
         final_scores[sector] = round(min(95.0, max(10.0, base_val + delta_val)), 1)
 
     # 4. Generate 5-year projections
-    projections = _build_projections(base_scores, deltas)
-
-    return {
-        "final_scores": final_scores,
-        "projections": projections,
-        "ripple_graph": {
-            "nodes": nodes,
-            "links": links
-        }
-    }
-
-def calculate_generic_simulation(city_data: dict, policy_name: str, engine_config: dict, parameters: dict) -> dict:
-    """
-    Generic quantitative engine for AI auto-generated policies (Feature: AI Policy Search).
-    Instead of hardcoded per-policy math, this reads per-parameter sector coefficients
-    (score points of impact per 1 unit of the parameter) out of `engine_config`, which was
-    produced at generation time (either by Gemini or the deterministic mock fallback).
-
-    engine_config shape:
-    {
-        "params": [{"key": ..., "label": ..., "min": ..., "max": ..., "default": ..., "step": ..., "unit": ...}, ...],
-        "coefficients": {"economy": {"param_key": weight, ...}, "environment": {...}, "mobility": {...}, "equity": {...}, "health": {...}},
-        "impact_levers": ["short phrase describing a downstream effect", ...]
-    }
-    """
-    base_scores = _compute_base_scores(city_data)
-    coefficients = engine_config.get("coefficients", {})
-    param_defs = {p["key"]: p for p in engine_config.get("params", [])}
-
-    # 1. Linear deltas: sum(weight_per_unit * applied_parameter_value) per sector
-    deltas = {"economy": 0.0, "environment": 0.0, "mobility": 0.0, "equity": 0.0, "health": 0.0}
-    for sector in deltas.keys():
-        sector_weights = coefficients.get(sector, {})
-        total = 0.0
-        for param_key, weight in sector_weights.items():
-            value = float(parameters.get(param_key, param_defs.get(param_key, {}).get("default", 0.0)))
-            total += float(weight) * value
-        deltas[sector] = total
-
-    # 2. Final scores, bounded like the hardcoded engine
-    final_scores = {}
-    for sector in ["economy", "environment", "mobility", "equity", "health"]:
-        final_scores[sector] = round(min(95.0, max(10.0, base_scores[sector] + deltas[sector])), 1)
-
-    # 3. Projections
-    projections = _build_projections(base_scores, deltas)
-
-    # 4. Ripple graph, built generically from the impact_levers + sign of each sector's delta
-    primary_param = engine_config.get("params", [{}])[0] if engine_config.get("params") else {}
-    primary_key = primary_param.get("key")
-    primary_value = parameters.get(primary_key, primary_param.get("default", 0))
-    primary_unit = primary_param.get("unit", "")
-
-    nodes = [{
-        "id": "p_origin",
-        "label": f"{policy_name}: {primary_value}{primary_unit}",
-        "type": "origin",
-        "val": float(primary_value) if isinstance(primary_value, (int, float)) else 0.0
-    }]
-    links = []
-
-    sector_order = ["mobility", "environment", "economy", "health", "equity"]
-    impact_levers = engine_config.get("impact_levers", []) or []
-    for i, lever_text in enumerate(impact_levers[:6]):
-        sector = sector_order[i % len(sector_order)]
-        magnitude = round(deltas.get(sector, 0.0) * (0.6 + 0.15 * i), 1)
-        node_id = f"n_lever_{i}"
-        nodes.append({
-            "id": node_id,
-            "label": f"{lever_text}: {'+' if magnitude >= 0 else ''}{magnitude}%",
-            "type": "positive" if magnitude >= 0 else "negative",
-            "val": magnitude
+    projections = []
+    for year in range(6):  # Year 0 (baseline) to Year 5
+        coef = year / 5.0
+        # Add a minor sinus wave fluctuation for realistic projections
+        fluct_eco = math.sin(year * 1.2) * 0.6
+        fluct_env = math.cos(year * 0.9) * 0.5
+        
+        projections.append({
+            "year": year,
+            "economy": round(min(95.0, max(10.0, base_scores["economy"] + (deltas["economy"] * coef) + fluct_eco)), 1),
+            "environment": round(min(95.0, max(10.0, base_scores["environment"] + (deltas["environment"] * coef) + fluct_env)), 1),
+            "mobility": round(min(95.0, max(10.0, base_scores["mobility"] + (deltas["mobility"] * coef))), 1),
+            "equity": round(min(95.0, max(10.0, base_scores["equity"] + (deltas["equity"] * coef))), 1),
+            "health": round(min(95.0, max(10.0, base_scores["health"] + (deltas["health"] * coef))), 1),
         })
-        links.append({"source": "p_origin", "target": node_id})
-        # Chain every other node for a bit of visual depth, mirroring the hand-authored graphs
-        if i >= 2:
-            links.append({"source": f"n_lever_{i-2}", "target": node_id})
 
     return {
         "final_scores": final_scores,

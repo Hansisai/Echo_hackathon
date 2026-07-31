@@ -1,16 +1,6 @@
 import React from 'react';
 import { Users, Bus, Leaf, DollarSign } from 'lucide-react';
 
-// Frontend-only display mapping: internal city names/IDs are untouched everywhere else
-// (API payloads, simulation calls, backend logic). This only relabels what the user sees
-// in the area-type dropdown.
-const AREA_TYPE_LABELS = {
-  'Metropolis Prime': 'Metropolitan',
-  'Automopolis': 'Urban',
-  'Industria': 'Suburban',
-  'Equitopia': 'Rural'
-};
-
 export default function Header({ pageTitle, cities, selectedCityId, onCityChange }) {
   const activeCity = cities.find(c => c.id === Number(selectedCityId)) || cities[0];
 
@@ -103,7 +93,7 @@ export default function Header({ pageTitle, cities, selectedCityId, onCityChange
 
           {/* City Selector */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Select Area Type</label>
+            <label style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Active Baseline City</label>
             <select
               value={selectedCityId}
               onChange={(e) => onCityChange(Number(e.target.value))}
@@ -126,7 +116,7 @@ export default function Header({ pageTitle, cities, selectedCityId, onCityChange
                   value={city.id}
                   style={{ background: 'var(--bg-panel-solid)', color: 'var(--text-bright)' }}
                 >
-                  {AREA_TYPE_LABELS[city.name] || city.name}
+                  {city.name}
                 </option>
               ))}
             </select>

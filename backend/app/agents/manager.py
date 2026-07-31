@@ -1,8 +1,8 @@
 import json
 import logging
 import concurrent.futures
-from google import genai
-from google.genai import types
+import urllib.request
+import urllib.error
 from backend.app.config import settings
 from backend.app.agents.templates import SYSTEM_PROMPTS, compile_user_prompt
 
@@ -10,28 +10,39 @@ logger = logging.getLogger("living_policy")
 
 def run_single_agent(agent_name: str, city_name: str, city_stats: dict, policy_id: str, policy_name: str, parameters: dict, engine_results: dict) -> dict:
     """
-    Invokes Gemini for a single agent, falling back to a realistic mock if API fails/missing.
+    Invokes Featherless AI for a single agent, falling back to a realistic mock if API fails/missing.
     """
     system_prompt = SYSTEM_PROMPTS.get(agent_name, SHARED_INSTRUCTION := "")
     user_prompt = compile_user_prompt(city_name, city_stats, policy_name, parameters, engine_results)
 
     # If API key exists, attempt the call
-    if settings.GEMINI_API_KEY:
+    if settings.FEATHERLESS_API_KEY:
         try:
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=user_prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    response_mime_type="application/json",
-                    temperature=0.7
-                )
-            )
+            url = "https://api.featherless.ai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {settings.FEATHERLESS_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            data = {
+                "model": settings.FEATHERLESS_MODEL,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": 0.7,
+                "response_format": {"type": "json_object"}
+            }
+            
+            req_body = json.dumps(data).encode("utf-8")
+            req = urllib.request.Request(url, data=req_body, headers=headers, method="POST")
+            
+            with urllib.request.urlopen(req, timeout=30) as response:
+                resp_body = response.read().decode("utf-8")
+                resp_data = json.loads(resp_body)
+                text = resp_data["choices"][0]["message"]["content"].strip()
             
             # Clean and parse the response text
-            text = response.text.strip()
-            # Remove markdown backticks if Gemini accidentally includes them
+            # Remove markdown backticks if model accidentally includes them
             if text.startswith("```"):
                 lines = text.split("\n")
                 if lines[0].startswith("```json"):
@@ -49,7 +60,7 @@ def run_single_agent(agent_name: str, city_name: str, city_stats: dict, policy_i
                 "mitigations": parsed_json.get("mitigations", [])
             }
         except Exception as e:
-            logger.warning(f"Failed to generate content via Gemini API for agent '{agent_name}': {e}. Falling back to mock.")
+            logger.warning(f"Failed to generate content via Featherless API for agent '{agent_name}': {e}. Falling back to mock.")
             
     # Mock fallback logic based on the calculated engine results
     score = float(engine_results["final_scores"].get(agent_name, 50.0))

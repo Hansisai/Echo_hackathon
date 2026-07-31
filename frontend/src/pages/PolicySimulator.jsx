@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sliders, Play, CheckCircle, Sparkles, Wand2, Loader2 } from 'lucide-react';
+import { Sliders, Play, CheckCircle, Sparkles } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function PolicySimulator({ selectedCityId, onSimulationStart, onSimulationSuccess }) {
@@ -8,11 +8,6 @@ export default function PolicySimulator({ selectedCityId, onSimulationStart, onS
   const [parameters, setParameters] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // AI Policy Search + Auto-generate
-  const [policyPrompt, setPolicyPrompt] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [generateError, setGenerateError] = useState(null);
 
   useEffect(() => {
     async function loadPolicies() {
@@ -48,30 +43,8 @@ export default function PolicySimulator({ selectedCityId, onSimulationStart, onS
       setParameters({ wfh_days: policy.default_value, incentive_pct: 10.0 });
     } else if (selectedPolicyId === 'green_canopy') {
       setParameters({ canopy_target: policy.default_value, maint_budget_m: 5.0 });
-    } else if (policy.is_ai_generated && policy.params) {
-      // Generic init for AI auto-generated policies: seed every declared param at its default
-      const initial = {};
-      policy.params.forEach((p) => { initial[p.key] = p.default; });
-      setParameters(initial);
     }
   }, [selectedPolicyId, policies]);
-
-  const handleGeneratePolicy = async () => {
-    if (!policyPrompt.trim()) return;
-    setGenerating(true);
-    setGenerateError(null);
-    try {
-      const newPolicy = await api.generatePolicy(policyPrompt.trim());
-      setPolicies(prev => [newPolicy, ...prev]);
-      setSelectedPolicyId(newPolicy.id);
-      setPolicyPrompt('');
-    } catch (err) {
-      console.error(err);
-      setGenerateError('Could not auto-generate that policy. Please make sure the FastAPI server is online and try again.');
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const handleSliderChange = (key, value) => {
     setParameters(prev => ({
@@ -169,60 +142,7 @@ export default function PolicySimulator({ selectedCityId, onSimulationStart, onS
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Choose which municipal policy intervention to simulate.</p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <Wand2 size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent)' }} />
-              <input
-                type="text"
-                value={policyPrompt}
-                onChange={(e) => setPolicyPrompt(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !generating) handleGeneratePolicy(); }}
-                placeholder="Describe a new policy… e.g. 'free e-bike sharing for low-income areas'"
-                disabled={generating}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px 10px 34px',
-                  fontSize: '12px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-light)',
-                  background: 'rgba(255,255,255,0.02)',
-                  color: 'var(--text-bright)',
-                  outline: 'none'
-                }}
-              />
-            </div>
-            <button
-              onClick={handleGeneratePolicy}
-              disabled={generating || !policyPrompt.trim()}
-              className="btn-secondary"
-              style={{
-                padding: '8px 14px',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                opacity: generating || !policyPrompt.trim() ? 0.6 : 1,
-                cursor: generating || !policyPrompt.trim() ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {generating ? (
-                <>
-                  <Loader2 size={14} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> Generating…
-                </>
-              ) : (
-                <>
-                  <Sparkles size={14} /> Generate
-                </>
-              )}
-            </button>
-          </div>
-          {generateError && (
-            <p style={{ fontSize: '11px', color: 'var(--color-equity)' }}>{generateError}</p>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '520px', overflowY: 'auto', paddingRight: '4px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {policies.map((p) => {
             const isSelected = selectedPolicyId === p.id;
             return (
@@ -248,26 +168,7 @@ export default function PolicySimulator({ selectedCityId, onSimulationStart, onS
                 }}
               >
                 <div style={{ paddingRight: '12px' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 600, color: isSelected ? 'var(--text-bright)' : 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {p.name}
-                    {p.is_ai_generated && (
-                      <span style={{
-                        fontSize: '9px',
-                        fontWeight: 700,
-                        color: 'var(--accent)',
-                        background: 'rgba(139, 92, 246, 0.12)',
-                        border: '1px solid rgba(139, 92, 246, 0.3)',
-                        borderRadius: '5px',
-                        padding: '1px 5px',
-                        letterSpacing: '0.5px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}>
-                        <Sparkles size={9} /> AI
-                      </span>
-                    )}
-                  </h3>
+                  <h3 style={{ fontSize: '14px', fontWeight: 600, color: isSelected ? 'var(--text-bright)' : 'var(--text-main)' }}>{p.name}</h3>
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.4 }}>
                     {p.description.substring(0, 80)}...
                   </p>
@@ -460,35 +361,6 @@ export default function PolicySimulator({ selectedCityId, onSimulationStart, onS
                   />
                   <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Range: $1M to $15M for irrigation, pruning, and health care.</span>
                 </div>
-              </>
-            )}
-
-            {activePolicy.is_ai_generated && activePolicy.params && (
-              <>
-                {activePolicy.params.map((param, idx) => (
-                  <div key={param.key} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600 }}>
-                      <label style={{ color: 'var(--text-bright)' }}>{param.label}</label>
-                      <span style={{ color: 'var(--accent)' }}>
-                        {parameters[param.key] ?? param.default} {param.unit}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min={param.min}
-                      max={param.max}
-                      step={param.step || 1}
-                      value={parameters[param.key] ?? param.default}
-                      onChange={(e) => handleSliderChange(param.key, e.target.value)}
-                    />
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                      Range: {param.min}{param.unit} to {param.max}{param.unit}.
-                    </span>
-                  </div>
-                ))}
-                <p style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <Sparkles size={11} style={{ color: 'var(--accent)' }} /> AI auto-generated policy module — parameters and sector impacts were synthesized from your prompt.
-                </p>
               </>
             )}
 

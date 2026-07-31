@@ -46,10 +46,6 @@ export const api = {
 
   // Policies
   getPolicies: () => request("/policies"),
-  generatePolicy: (prompt) => request("/policies/generate", {
-    method: "POST",
-    body: JSON.stringify({ prompt })
-  }),
 
   // Simulations
   runSimulation: (cityId, policyId, parameters) => request("/simulations/run", {

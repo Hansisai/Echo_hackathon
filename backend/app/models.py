@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -31,11 +31,6 @@ class Policy(Base):
     max_value = Column(Float, nullable=False)
     default_value = Column(Float, nullable=False)
     unit = Column(String(20), nullable=False)
-
-    # AI-generated policy support (Feature: AI Policy Search + Auto-generate)
-    is_ai_generated = Column(Boolean, nullable=False, default=False)
-    # JSON blob: {"params": [...], "coefficients": {...}, "impact_levers": [...]}
-    engine_config = Column(Text, nullable=True)
 
     runs = relationship("SimulationRun", back_populates="policy")
 

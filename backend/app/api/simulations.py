@@ -10,7 +10,7 @@ from typing import List
 
 from backend.app.database import get_db
 from backend.app.models import City, Policy, SimulationRun, AgentReport
-from backend.app.engine.policy_engine import calculate_simulation, calculate_generic_simulation
+from backend.app.engine.policy_engine import calculate_simulation
 from backend.app.agents.manager import run_all_agents
 from backend.app.schemas import (
     SimulationRunRequest, 
@@ -56,11 +56,7 @@ def run_simulation(payload: SimulationRunRequest, db: Session = Depends(get_db))
     }
 
     # 2. Execute mathematical engine (deltas, projections, causal graph)
-    if policy.is_ai_generated and policy.engine_config:
-        engine_config = json.loads(policy.engine_config)
-        engine_results = calculate_generic_simulation(city_dict, policy.name, engine_config, payload.parameters)
-    else:
-        engine_results = calculate_simulation(city_dict, policy.id, payload.parameters)
+    engine_results = calculate_simulation(city_dict, policy.id, payload.parameters)
 
     # 3. Deliberate among AI agents (calling Gemini in parallel, or using mock fallbacks)
     agent_outputs = run_all_agents(
