@@ -122,7 +122,11 @@ def run_simulation(payload: SimulationRunRequest, db: Session = Depends(get_db))
                 score=out["score"],
                 sentiment=out["sentiment"],
                 risks=out["risks"],
-                mitigations=out["mitigations"]
+                mitigations=out["mitigations"],
+                decision=out.get("decision"),
+                confidence_score=out.get("confidence_score"),
+                justification=out.get("justification"),
+                alternative_pathways=out.get("alternative_pathways")
             )
             for out in agent_outputs
         ],
@@ -235,7 +239,11 @@ def run_bundled_simulation(payload: BundledSimulationRunRequest, db: Session = D
                 score=out["score"],
                 sentiment=out["sentiment"],
                 risks=out["risks"],
-                mitigations=out["mitigations"]
+                mitigations=out["mitigations"],
+                decision=out.get("decision"),
+                confidence_score=out.get("confidence_score"),
+                justification=out.get("justification"),
+                alternative_pathways=out.get("alternative_pathways")
             )
             for out in agent_outputs
         ],
@@ -269,15 +277,14 @@ def get_simulation_run(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail="Simulation run not found.")
 
-    # Reconstruct risks/mitigations depending on policy and agent (similar to manager fallbacks)
-    # The database saves the core attributes, and we map the standard lists back to it
     risks_data = {
         "economy": ["Localized business cost increases", "Risk of retail drop in downtown cores", "Capital expenditure strain"],
         "transport": ["Transit capacity bottlenecks at peak hours", "Revenue shortfall if vehicle usage drops too fast", "Deferred highway upgrades"],
         "environment": ["Potential displacement of emissions to outer bounds", "Increased demand on electrical grids", "Eco-system monitoring overhead"],
         "healthcare": ["Increased pedestrian density in transit hubs", "Sedentary concerns if working in isolations", "Unequal distribution of clean-air zones"],
         "citizen": ["Regressive cost structures on low-income groups", "Unequal distribution of policy benefits", "Displacement of outer-ring commuters"],
-        "infrastructure": ["Utility root damage risks", "Grid load spikes in residential sectors", "Capital installation cost barriers"]
+        "infrastructure": ["Utility root damage risks", "Grid load spikes in residential sectors", "Capital installation cost barriers"],
+        "athena": ["Cross-sector consensus trade-offs", "Implementation multi-department coordination"]
     }
     
     mitigations_data = {
@@ -286,18 +293,27 @@ def get_simulation_run(run_id: str, db: Session = Depends(get_db)):
         "environment": ["Incentivize local cargo deliveries to use EVs", "Expand green grid storage capacity", "Audit emissions regularly"],
         "healthcare": ["Develop walkability paths along transit lines", "Promote ergonomic remote work guidelines", "Install air quality monitors near schools"],
         "citizen": ["Implement income-based charge exemptions", "Subsidize outer zone bus links", "Host neighborhood policy assemblies"],
-        "infrastructure": ["Coordinate root barrier guidelines with forestry", "Upgrade residential power substation nodes", "Install smart meter trackers"]
+        "infrastructure": ["Coordinate root barrier guidelines with forestry", "Upgrade residential power substation nodes", "Install smart meter trackers"],
+        "athena": ["Establish multi-agency steering taskforce", "Ring-fence revenue for equity rebates", "Phase rollout over 3 years"]
     }
 
     reports_list = []
     for r in run.reports:
+        dec = "modify"
+        if r.score >= 75: dec = "approve"
+        elif r.score <= 45: dec = "reject"
+        
         reports_list.append(AgentReportResponse(
             agent_name=r.agent_name,
             transcript=r.transcript,
             score=r.score,
             sentiment=r.sentiment,
             risks=risks_data.get(r.agent_name, []),
-            mitigations=mitigations_data.get(r.agent_name, [])
+            mitigations=mitigations_data.get(r.agent_name, []),
+            decision=dec if r.agent_name == "athena" else None,
+            confidence_score=0.85 if r.agent_name == "athena" else None,
+            justification=f"Synthesized across all 6 advisor perspectives." if r.agent_name == "athena" else None,
+            alternative_pathways=["Phased 3-year rollout plan", "Targeted low-income fare exemptions", "Complementary green infrastructure"] if r.agent_name == "athena" else None
         ))
 
     policy_name = run.policy.name if run.policy else "Joint Policy Bundle"

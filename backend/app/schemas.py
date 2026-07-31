@@ -59,6 +59,10 @@ class AgentReportResponse(BaseModel):
     sentiment: str
     risks: List[str]
     mitigations: List[str]
+    decision: Optional[str] = None
+    confidence_score: Optional[float] = None
+    justification: Optional[str] = None
+    alternative_pathways: Optional[List[str]] = None
 
 class RippleNodeSchema(BaseModel):
     id: str

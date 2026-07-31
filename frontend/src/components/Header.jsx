@@ -1,7 +1,7 @@
 import React from 'react';
-import { Users, Bus, Leaf, DollarSign } from 'lucide-react';
+import { Users, Bus, Leaf, DollarSign, Sun, Moon } from 'lucide-react';
 
-export default function Header({ pageTitle, cities, selectedCityId, onCityChange }) {
+export default function Header({ pageTitle, cities, selectedCityId, onCityChange, theme = 'dark', onToggleTheme }) {
   const activeCity = cities.find(c => c.id === Number(selectedCityId)) || cities[0];
 
   const formatNumber = (num) => {
@@ -42,7 +42,7 @@ export default function Header({ pageTitle, cities, selectedCityId, onCityChange
 
       {/* City Baseline Quick Stats & Selector */}
       {activeCity && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           
           {/* Quick Metrics */}
           <div 
@@ -121,6 +121,28 @@ export default function Header({ pageTitle, cities, selectedCityId, onCityChange
               ))}
             </select>
           </div>
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={onToggleTheme}
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Theme`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid var(--border-light)',
+              color: 'var(--text-bright)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              marginTop: '14px'
+            }}
+          >
+            {theme === 'dark' ? <Sun size={18} style={{ color: '#f59e0b' }} /> : <Moon size={18} style={{ color: '#8b5cf6' }} />}
+          </button>
 
         </div>
       )}

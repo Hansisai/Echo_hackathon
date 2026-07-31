@@ -1,12 +1,6 @@
 import React from 'react';
 
-export default function RadarChart({ 
-  scores, 
-  title = "City Balance Radar", 
-  subtitle = "How balanced is your city? A wider, even shape is healthier overall.",
-  accentColor = "var(--accent)",
-  fillColor = "rgba(139, 92, 246, 0.25)"
-}) {
+export default function RadarChart({ scores }) {
   // Center and dimensions
   const cx = 160;
   const cy = 160;
@@ -50,7 +44,7 @@ export default function RadarChart({
 
   // Calculate points for the actual scores polygon
   const scorePoints = axes.map((axis, i) => {
-    const val = scores ? (scores[axis.key] || 50) : 50;
+    const val = scores[axis.key] || 50;
     const { x, y } = getCoordinates(i, val);
     return `${x},${y}`;
   }).join(' ');
@@ -81,14 +75,14 @@ export default function RadarChart({
       }}
     >
       <div>
-        <h3 style={{ fontSize: '15px', fontWeight: 600, textAlign: 'center' }}>{title}</h3>
-        {subtitle && <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>{subtitle}</p>}
+        <h3 style={{ fontSize: '15px', fontWeight: 600, textAlign: 'center' }}>City Balance Radar</h3>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>How balanced is your city? A wider, even shape is healthier overall.</p>
       </div>
 
       <svg width={width} height={height} style={{ overflow: 'visible' }}>
         <defs>
           <radialGradient id="radar-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={accentColor} />
+            <stop offset="0%" stopColor="var(--accent-glow)" />
             <stop offset="100%" stopColor="rgba(139, 92, 246, 0.0)" />
           </radialGradient>
         </defs>
@@ -134,11 +128,11 @@ export default function RadarChart({
         {/* Core Values Glowing Overlay Polygon */}
         <polygon
           points={scorePoints}
-          fill={fillColor}
-          stroke={accentColor}
+          fill="rgba(139, 92, 246, 0.25)"
+          stroke="var(--accent)"
           strokeWidth="2.5"
           style={{
-            filter: `drop-shadow(0 0 8px ${accentColor})`,
+            filter: 'drop-shadow(0 0 8px var(--accent-glow))',
             transition: 'all 0.5s ease'
           }}
         />

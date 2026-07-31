@@ -4,7 +4,13 @@ import concurrent.futures
 from google import genai
 from google.genai import types
 from backend.app.config import settings
-from backend.app.agents.templates import SYSTEM_PROMPTS, compile_user_prompt, compile_bundled_user_prompt
+from backend.app.agents.templates import (
+    SYSTEM_PROMPTS, 
+    SHARED_INSTRUCTION, 
+    compile_user_prompt, 
+    compile_bundled_user_prompt,
+    compile_meta_user_prompt
+)
 
 logger = logging.getLogger("living_policy")
 
@@ -12,7 +18,7 @@ def run_single_agent(agent_name: str, city_name: str, city_stats: dict, policy_i
     """
     Invokes Gemini for a single agent, falling back to a realistic mock if API fails/missing.
     """
-    system_prompt = SYSTEM_PROMPTS.get(agent_name, SHARED_INSTRUCTION := "")
+    system_prompt = SYSTEM_PROMPTS.get(agent_name, SHARED_INSTRUCTION)
     user_prompt = compile_user_prompt(city_name, city_stats, policy_name, parameters, engine_results)
 
     # If API key exists, attempt the call
@@ -98,72 +104,160 @@ def run_single_agent(agent_name: str, city_name: str, city_stats: dict, policy_i
             "congestion_pricing": f"A flat congestion fee operates as a regressive tax, disproportionately punishing outer-suburb workers. We demand low-income exemptions.",
             "metro_fare_subsidy": f"A major equity success. Accessible, cheap transit is a fundamental citizen right that saves lower-income households hundreds of dollars annually.",
             "carbon_tax": f"If corporations pass carbon taxes down through energy utility bills, the cost of living index spikes, which negatively impacts low-income groups.",
-            "wfh_mandate": f"WFH options are a major benefit for white-collar workers, but service and physical industry workers do not share this flexibility, creating inequality.",
-            "green_canopy": f"We must ensure tree-planting campaigns target historically under-resourced districts first to avoid environmental gentrification."
+            "wfh_mandate": f"Flexible work schedules give hours back to working families, though service-sector employees who cannot work remotely face equity gaps.",
+            "green_canopy": f"Trees improve urban aesthetics and reduce neighborhood summer heat, but planting must be prioritized in historically lower-income neighborhoods first."
         },
         "infrastructure": {
-            "congestion_pricing": f"Charging tolls requires automated smart cameras and license scanners, placing an immediate demand on fiber networks and edge servers.",
-            "metro_fare_subsidy": f"Subsidies require building out smart ticketing cards and real-time station analytics systems to balance peak commute loads.",
-            "carbon_tax": f"A carbon tax accelerates the retirement of fossil fuel plants. We must rapidly build out grid storage batteries to avoid peak power failures.",
-            "wfh_mandate": f"A sudden shift to home offices increases residential internet traffic and water consumption, placing higher demands on residential utility nodes.",
-            "green_canopy": f"Urban tree roots can interfere with underground water and power lines. Coordinated planning with utility mapping is critical."
+            "congestion_pricing": f"Traffic redirection onto secondary arterial roads requires intelligent light timing upgrades and road bed reinforcing.",
+            "metro_fare_subsidy": f"Heavy passenger surge demands upgrading power sub-stations along metro lines and expanding maintenance facility capacity.",
+            "carbon_tax": f"Industrial clean-tech shifts will spike localized grid demand; we must deploy smart transformers and expanded battery buffer banks.",
+            "wfh_mandate": f"Commercial utility loads shift into residential suburbs. Suburban power distribution transformers must be reinforced.",
+            "green_canopy": f"Sub-surface root systems must be managed to protect underground fiber cables, water mains, and power lines during street planting."
         }
     }
 
-    # Extract template text, default if missing
-    policy_templates = transcripts.get(agent_name, {})
-    transcript_text = policy_templates.get(
-        policy_id, 
-        f"The proposed {policy_name} requires careful coordination across local departments to balance funding allocations and long-term sustainability goals."
-    )
-
-    # Standard default risk/mitigation arrays
     risks_data = {
-        "economy": ["Localized business cost increases", "Risk of retail drop in downtown cores", "Capital expenditure strain"],
-        "transport": ["Transit capacity bottlenecks at peak hours", "Revenue shortfall if vehicle usage drops too fast", "Deferred highway upgrades"],
-        "environment": ["Potential displacement of emissions to outer bounds", "Increased demand on electrical grids", "Eco-system monitoring overhead"],
-        "healthcare": ["Increased pedestrian density in transit hubs", "Sedentary concerns if working in isolations", "Unequal distribution of clean-air zones"],
-        "citizen": ["Regressive cost structures on low-income groups", "Unequal distribution of policy benefits", "Displacement of outer-ring commuters"],
-        "infrastructure": ["Utility root damage risks", "Grid load spikes in residential sectors", "Capital installation cost barriers"]
+        "economy": ["Localized business cost increases", "Capital expenditure strain on municipal budget"],
+        "transport": ["Peak hour transit capacity bottlenecks", "Revenue shortfall if usage shifts abruptly"],
+        "environment": ["Potential displacement of emissions to outer ring", "Ecosystem monitoring overhead"],
+        "healthcare": ["Increased pedestrian density in transit hubs", "Commuter stress during transition"],
+        "citizen": ["Regressive cost impact on low-income groups", "Unequal geographic benefit distribution"],
+        "infrastructure": ["Utility root damage risks", "Grid load spikes in residential zones"]
     }
-    
+
     mitigations_data = {
-        "economy": ["Provide tax offsets for inner-city retailers", "Reinvest tax revenue into utility subsidies", "Phase implementation slowly"],
-        "transport": ["Increase bus transit frequencies immediately", "Optimize traffic lights on transit corridors", "Create suburban park-and-rides"],
-        "environment": ["Incentivize local cargo deliveries to use EVs", "Expand green grid storage capacity", "Audit emissions regularly"],
-        "healthcare": ["Develop walkability paths along transit lines", "Promote ergonomic remote work guidelines", "Install air quality monitors near schools"],
-        "citizen": ["Implement income-based charge exemptions", "Subsidize outer zone bus links", "Host neighborhood policy assemblies"],
-        "infrastructure": ["Coordinate root barrier guidelines with forestry", "Upgrade residential power substation nodes", "Install smart meter trackers"]
+        "economy": ["Provide tax offsets for inner-city retailers", "Reinvest tax revenue into utility subsidies"],
+        "transport": ["Increase bus transit frequencies immediately", "Create suburban park-and-ride nodes"],
+        "environment": ["Incentivize local cargo deliveries to use EVs", "Expand green grid storage capacity"],
+        "healthcare": ["Develop walkability paths along transit lines", "Install air monitors near schools"],
+        "citizen": ["Implement income-based charge exemptions", "Subsidize outer zone bus feeder links"],
+        "infrastructure": ["Coordinate root barrier guidelines with forestry", "Upgrade suburban power transformer nodes"]
     }
+
+    policy_transcripts = transcripts.get(agent_name, {})
+    comment = policy_transcripts.get(policy_id, f"The policy execution exhibits measurable impacts across the {agent_name} sector dynamics.")
 
     return {
         "agent_name": agent_name,
-        "transcript": transcript_text,
+        "transcript": comment,
         "score": round(score, 1),
         "sentiment": sentiment,
-        "risks": risks_data.get(agent_name, ["Unanticipated integration issues"]),
-        "mitigations": mitigations_data.get(agent_name, ["Engage in cross-sector workshops"])
+        "risks": risks_data.get(agent_name, []),
+        "mitigations": mitigations_data.get(agent_name, [])
     }
+
+
+def run_meta_decision_agent(city_name: str, city_stats: dict, policy_name: str, parameters: dict, engine_results: dict, advisor_reports: list) -> dict:
+    """
+    Executes the 7th Meta-Decision Agent (Athena) synthesizing deliberations from all 6 sector advisors.
+    Calculates weighted scoring, conflict resolutions, decision recommendation, confidence score (0.0 to 1.0 float), and alternative pathways.
+    """
+    system_prompt = SYSTEM_PROMPTS.get("meta_decision", "")
+    user_prompt = compile_meta_user_prompt(city_name, city_stats, policy_name, parameters, engine_results, advisor_reports)
+
+    if settings.GEMINI_API_KEY:
+        try:
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=user_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    response_mime_type="application/json",
+                    temperature=0.6
+                )
+            )
+            text = response.text.strip()
+            if text.startswith("```"):
+                lines = text.split("\n")
+                if lines[0].startswith("```json"):
+                    text = "\n".join(lines[1:-1])
+                elif lines[0].startswith("```"):
+                    text = "\n".join(lines[1:-1])
+            
+            parsed = json.loads(text.strip())
+            conf_val = float(parsed.get("confidence_score", 0.85))
+            if conf_val > 1.0:
+                conf_val = round(conf_val / 100.0, 2)
+
+            return {
+                "agent_name": "athena",
+                "transcript": parsed.get("message", "Athena executive synthesis complete."),
+                "score": float(parsed.get("score", 75)),
+                "sentiment": parsed.get("sentiment", "positive"),
+                "risks": parsed.get("risks", ["Cross-sector consensus trade-offs"]),
+                "mitigations": parsed.get("mitigations", ["Establish multi-agency coordination taskforce"]),
+                "decision": parsed.get("decision", "modify"),
+                "confidence_score": conf_val,
+                "justification": parsed.get("justification", "Synthesized across 6 advisor perspectives."),
+                "alternative_pathways": parsed.get("alternative_pathways", ["Bundle with targeted subsidies", "Phase rollout over 3 years"])
+            }
+        except Exception as e:
+            logger.warning(f"Failed to generate content via Gemini API for Athena Meta-Decision Agent: {e}. Falling back to mock synthesis.")
+
+    # Mock fallback synthesis logic
+    scores = [float(r.get("score", 50)) for r in advisor_reports]
+    avg_score = sum(scores) / len(scores) if scores else 50.0
+    score_spread = max(scores) - min(scores) if scores else 0.0
+
+    if avg_score >= 75.0:
+        decision = "approve"
+        sentiment = "positive"
+    elif avg_score <= 45.0:
+        decision = "reject"
+        sentiment = "negative"
+    elif score_spread > 35.0:
+        decision = "modify"
+        sentiment = "neutral"
+    else:
+        decision = "bundle"
+        sentiment = "positive"
+
+    conf_score = round(max(0.55, min(0.96, 1.0 - (score_spread / 150.0))), 2)
+
+    all_risks = []
+    all_mitigations = []
+    for r in advisor_reports:
+        all_risks.extend(r.get("risks", []))
+        all_mitigations.extend(r.get("mitigations", []))
+
+    consensus_risks = list(dict.fromkeys(all_risks))[:3]
+    consensus_mitigations = list(dict.fromkeys(all_mitigations))[:3]
+
+    justification_str = (
+        f"Athena synthesis evaluated all 6 advisor domain perspectives. "
+        f"Eva (Economy) and Atlas (Transport) provided core index projections, while Gaia (Environment), Hygeia (Healthcare), Sophia (Citizen Equity), and Prometheus (Infrastructure) highlighted sector trade-offs. "
+        f"Weighted multi-sector score stands at {round(avg_score, 1)}/100."
+    )
+
+    return {
+        "agent_name": "athena",
+        "transcript": f"Meta-Decision Executive Synthesis: {policy_name} achieves a weighted consensus score of {round(avg_score, 1)}/100. Recommendation is to {decision.upper()} with targeted sector mitigations.",
+        "score": round(avg_score, 1),
+        "sentiment": sentiment,
+        "risks": consensus_risks or ["Cross-sector consensus trade-offs"],
+        "mitigations": consensus_mitigations or ["Establish multi-agency coordination taskforce"],
+        "decision": decision,
+        "confidence_score": conf_score,
+        "justification": justification_str,
+        "alternative_pathways": [
+            f"Convert {policy_name} into a phased multi-year transition plan",
+            "Pair policy with low-income fare or tax exemptions to boost equity",
+            "Bundle with complementary green infrastructure investments"
+        ]
+    }
+
 
 def run_all_agents(city_name: str, city_stats: dict, policy_id: str, policy_name: str, parameters: dict, engine_results: dict) -> list:
     """
-    Executes the deliberation of all 6 specialized agents in parallel threads.
+    Executes deliberations of all 6 sector agents in parallel, then synthesizes via 7th Meta-Decision Agent (Athena).
     """
     agent_names = ["economy", "transport", "environment", "healthcare", "citizen", "infrastructure"]
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-        # Create map of future objects to agent names
         future_to_agent = {
-            executor.submit(
-                run_single_agent, 
-                agent, 
-                city_name, 
-                city_stats, 
-                policy_id,
-                policy_name, 
-                parameters, 
-                engine_results
-            ): agent for agent in agent_names
+            executor.submit(run_single_agent, agent, city_name, city_stats, policy_id, policy_name, parameters, engine_results): agent
+            for agent in agent_names
         }
         
         results = []
@@ -174,7 +268,6 @@ def run_all_agents(city_name: str, city_stats: dict, policy_id: str, policy_name
                 results.append(data)
             except Exception as exc:
                 logger.error(f"Agent '{agent}' generated an exception during run: {exc}")
-                # Append a fallback object
                 results.append({
                     "agent_name": agent,
                     "transcript": "Deliberation failed due to an internal execution error.",
@@ -184,17 +277,27 @@ def run_all_agents(city_name: str, city_stats: dict, policy_id: str, policy_name
                     "mitigations": ["Contact support administrator"]
                 })
                 
-    # Sort results to have a predictable order
     order = {name: i for i, name in enumerate(agent_names)}
     results.sort(key=lambda x: order.get(x["agent_name"], 99))
+
+    # Run 7th Meta-Decision Agent (Athena)
+    meta_report = run_meta_decision_agent(
+        city_name=city_name,
+        city_stats=city_stats,
+        policy_name=policy_name,
+        parameters=parameters,
+        engine_results=engine_results,
+        advisor_reports=results
+    )
+    results.append(meta_report)
     return results
 
 
 def run_single_bundled_agent(agent_name: str, city_name: str, city_stats: dict, policy_names: list, all_parameters: dict, engine_results: dict, synergies_conflicts: list) -> dict:
     """
-    Invokes Gemini (or fallback mock) for a single agent evaluating a multi-policy bundle.
+    Invokes Gemini for a single agent evaluating a multi-policy bundle.
     """
-    system_prompt = SYSTEM_PROMPTS.get(agent_name, "")
+    system_prompt = SYSTEM_PROMPTS.get(agent_name, SHARED_INSTRUCTION)
     user_prompt = compile_bundled_user_prompt(city_name, city_stats, policy_names, all_parameters, engine_results, synergies_conflicts)
 
     if settings.GEMINI_API_KEY:
@@ -242,7 +345,6 @@ def run_single_bundled_agent(agent_name: str, city_name: str, city_stats: dict, 
 
     policies_formatted = " + ".join(policy_names)
     syn_count = len([s for s in synergies_conflicts if s.get("type") == "synergy"])
-    con_count = len([s for s in synergies_conflicts if s.get("type") == "conflict"])
 
     transcripts_bundle = {
         "economy": f"The bundled deployment of {policies_formatted} balances municipal revenue generation with target subsidies. We record {syn_count} positive economic/mobility synergies offsetting short-term transition costs.",
@@ -283,7 +385,7 @@ def run_single_bundled_agent(agent_name: str, city_name: str, city_stats: dict, 
 
 def run_all_bundled_agents(city_name: str, city_stats: dict, policy_names: list, all_parameters: dict, engine_results: dict, synergies_conflicts: list) -> list:
     """
-    Executes multi-policy bundled deliberation of all 6 agents in parallel.
+    Executes multi-policy bundled deliberation of all 6 agents in parallel, then synthesizes via 7th Meta-Decision Agent (Athena).
     """
     agent_names = ["economy", "transport", "environment", "healthcare", "citizen", "infrastructure"]
     
@@ -320,5 +422,15 @@ def run_all_bundled_agents(city_name: str, city_stats: dict, policy_names: list,
                 
     order = {name: i for i, name in enumerate(agent_names)}
     results.sort(key=lambda x: order.get(x["agent_name"], 99))
-    return results
 
+    # Append 7th Meta-Decision Agent report (Athena)
+    meta_report = run_meta_decision_agent(
+        city_name=city_name,
+        city_stats=city_stats,
+        policy_name=" + ".join(policy_names),
+        parameters=all_parameters,
+        engine_results=engine_results,
+        advisor_reports=results
+    )
+    results.append(meta_report)
+    return results

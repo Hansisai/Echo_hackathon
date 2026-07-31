@@ -21,6 +21,21 @@ export default function App() {
   const [currentRun, setCurrentRun] = useState(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  // Theme side-effect listener
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   // Load initial city baselines and latest simulation history
   useEffect(() => {
@@ -169,7 +184,7 @@ export default function App() {
           justifyContent: 'center',
           gap: '16px',
           background: 'var(--bg-dark)',
-          color: 'white',
+          color: 'var(--text-bright)',
           fontFamily: 'var(--font-sans)'
         }}
       >
@@ -192,6 +207,8 @@ export default function App() {
           cities={cities} 
           selectedCityId={selectedCityId} 
           onCityChange={handleCityChange} 
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
         />
 
         {/* Dynamic page contents */}

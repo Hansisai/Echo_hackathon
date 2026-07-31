@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GitCompare, Award, TrendingUp, ShieldCheck, ArrowRight, AlertCircle } from 'lucide-react';
+import { GitCompare, Award, Compass, Scale, ShieldCheck } from 'lucide-react';
 import { api } from '../services/api';
 import RadarChart from '../components/RadarChart';
 import LineChart from '../components/LineChart';
@@ -13,7 +13,6 @@ export default function Comparison() {
   const [loading, setLoading] = useState(true);
   const [loadingA, setLoadingA] = useState(false);
   const [loadingB, setLoadingB] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function loadHistory() {
@@ -29,7 +28,6 @@ export default function Comparison() {
         setLoading(false);
       } catch (err) {
         console.error(err);
-        setError('Failed to load simulation history.');
         setLoading(false);
       }
     }
@@ -74,7 +72,7 @@ export default function Comparison() {
     if (val === null || val === undefined) return 'N/A';
     if (typeof val === 'object') {
       return Object.entries(val)
-        .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
+        .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
         .join(', ');
     }
     return String(val);
@@ -126,7 +124,6 @@ export default function Comparison() {
     { key: 'health', label: 'Health' }
   ];
 
-  // Compute average scores if both runs loaded
   const calcAvg = (scores) => {
     if (!scores) return 0;
     const vals = Object.values(scores);
@@ -138,7 +135,6 @@ export default function Comparison() {
   const avgB = runB ? calcAvg(runB.final_scores) : 0;
   const avgDiff = Number((avgB - avgA).toFixed(1));
 
-  // Extract Athena / Meta agent report if present
   const getMetaReport = (runData) => {
     if (!runData || !runData.agent_reports) return null;
     return runData.agent_reports.find(r => r.agent_name === 'meta_decision' || r.agent_name === 'athena');
@@ -383,7 +379,7 @@ export default function Comparison() {
                         color: metaA.decision === 'approve' ? '#10b981' : metaA.decision === 'reject' ? '#ef4444' : '#f59e0b'
                       }}
                     >
-                      {metaA.decision} ({metaA.confidence_score}% Conf.)
+                      {metaA.decision} ({metaA.confidence_score ? Math.round(metaA.confidence_score * (metaA.confidence_score <= 1.0 ? 100 : 1)) : 85}% Conf.)
                     </span>
                   )}
                 </div>
@@ -407,7 +403,7 @@ export default function Comparison() {
                         color: metaB.decision === 'approve' ? '#10b981' : metaB.decision === 'reject' ? '#ef4444' : '#f59e0b'
                       }}
                     >
-                      {metaB.decision} ({metaB.confidence_score}% Conf.)
+                      {metaB.decision} ({metaB.confidence_score ? Math.round(metaB.confidence_score * (metaB.confidence_score <= 1.0 ? 100 : 1)) : 85}% Conf.)
                     </span>
                   )}
                 </div>

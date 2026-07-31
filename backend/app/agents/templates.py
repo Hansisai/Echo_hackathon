@@ -48,7 +48,27 @@ SYSTEM_PROMPTS = {
     Persona: Prometheus, Smart Grid & Utilities Architect.
     Focus: Electrical grid capacity, EV charging networks, water management, public telecommunication load, and municipal service longevity.
     You prioritize smart utility preparedness.
-    """ + SHARED_INSTRUCTION
+    """ + SHARED_INSTRUCTION,
+
+    "meta_decision": """
+    Persona: Athena, Meta-Decision & Synthesis Chief Executive.
+    Focus: Review outputs from all specialized advisors (Eva, Atlas, Gaia, Hygeia, Sophia, Prometheus) and synthesize them into a unified, balanced city council decision.
+    You identify consensus points, weigh sector trade-offs, resolve conflicts with mitigations, assign a confidence score, and formulate final policy directives (approve, reject, modify, or bundle).
+    """ + """
+You MUST output your response in strict JSON format. Do NOT wrap it in markdown block tags (like ```json ... ```) or add any other text outside the JSON.
+Your JSON response must contain precisely these keys:
+{
+  "message": "Your 2-3 sentence executive summary in plain language synthesizing the overall decision and conflict resolution.",
+  "score": <integer from 10 to 95 representing overall consensus index>,
+  "sentiment": "<one of: positive, negative, neutral>",
+  "risks": ["Primary consensus conflict 1", "Primary consensus conflict 2..."],
+  "mitigations": ["Proposed compromise 1", "Proposed compromise 2..."],
+  "decision": "<one of: approve, reject, modify, bundle>",
+  "confidence_score": <float from 0.0 to 1.0 representing decision confidence, e.g. 0.85>,
+  "justification": "Detailed justification referencing each advisor persona (Eva, Atlas, Gaia, Hygeia, Sophia, Prometheus).",
+  "alternative_pathways": ["Alternative pathway 1", "Alternative pathway 2..."]
+}
+"""
 }
 
 def compile_user_prompt(city_name: str, city_stats: dict, policy_name: str, parameters: dict, engine_results: dict) -> str:
@@ -112,3 +132,56 @@ def compile_bundled_user_prompt(city_name: str, city_stats: dict, policy_names: 
     Review the joint package impact and return your sector's response in the specified JSON structure.
     """
 
+
+def compile_meta_user_prompt(city_name: str, city_stats: dict, policy_name: str, parameters: dict, engine_results: dict, advisor_reports: list) -> str:
+    """
+    Constructs input context for the Meta-Decision Agent combining city data, quantitative projections, and all 6 advisor reports.
+    """
+    reports_formatted = []
+    for rep in advisor_reports:
+        reports_formatted.append(
+            f"- {rep['agent_name'].upper()} Advisor (Score: {rep['score']}/100, Sentiment: {rep['sentiment']}):\n"
+            f"  Statement: \"{rep['transcript']}\"\n"
+            f"  Risks: {', '.join(rep.get('risks', []))}\n"
+            f"  Mitigations: {', '.join(rep.get('mitigations', []))}"
+        )
+    
+    reports_str = "\n\n".join(reports_formatted)
+    
+    return f"""
+    City Context:
+    - Name: {city_name}
+    - Population: {city_stats.get('population')}
+    - Median Income: ${city_stats.get('median_income')}/yr
+    - Transit Share: {city_stats.get('transit_share')}%
+    - Municipal Budget: ${city_stats.get('municipal_budget')}M/yr
+    - AQI Baseline: {city_stats.get('aqi_baseline')}
+
+    Proposed Policy Package:
+    - Policy Name: {policy_name}
+    - Parameters Applied: {parameters}
+
+    Quantitative Calculations (Sector End Scores 0-100):
+    - Economy: {engine_results['final_scores']['economy']}
+    - Environment: {engine_results['final_scores']['environment']}
+    - Mobility: {engine_results['final_scores']['mobility']}
+    - Equity: {engine_results['final_scores']['equity']}
+    - Health: {engine_results['final_scores']['health']}
+
+    Deliberations from 6 Specialized Advisors:
+    {reports_str}
+
+    SYNTHESIS TASK:
+    1. Collect recommendations, risks, and scores from each advisor.
+    2. Identify consensus points and conflicts between sectors.
+    3. Apply weighted scoring across Economy, Environment, Mobility, Equity, Health.
+    4. Propose clear compromises to resolve sector conflicts.
+    5. Output:
+       • Executive summary message (plain language)
+       • Final decision ('approve', 'reject', 'modify', 'bundle')
+       • Confidence score (float 0.0 to 1.0, e.g. 0.85)
+       • Justification referencing each advisor persona (Eva, Atlas, Gaia, Hygeia, Sophia, Prometheus)
+       • Alternative pathways if consensus is weak
+
+    Return strict JSON response as specified.
+    """
