@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 # --- Cities ---
@@ -30,16 +30,28 @@ class PolicyResponse(BaseModel):
     max_value: float
     default_value: float
     unit: str
+    purpose: Optional[str] = None
+    mechanism: Optional[str] = None
+    advantages: List[str] = []
+    risks: List[str] = []
+    status: str = "active"
+    category: str = "Urban Planning"
 
     class Config:
         from_attributes = True
 
-# --- Simulation Run ---
-class SimulationRunRequest(BaseModel):
-    city_id: int = Field(..., description="ID of the baseline city to simulate")
-    policy_id: str = Field(..., description="ID of the policy to apply")
-    parameters: Dict[str, Any] = Field(..., description="Key-value parameters (sliders) for the policy")
+class PolicyDigestResponse(BaseModel):
+    id: str
+    title: str
+    description: str
+    purpose: str
+    mechanism: str
+    advantages: List[str]
+    risks: List[str]
+    status: str
+    category: str
 
+# --- Graph & Agent Schemas ---
 class AgentReportResponse(BaseModel):
     agent_name: str
     transcript: str
@@ -61,6 +73,42 @@ class RippleLinkSchema(BaseModel):
 class RippleGraphSchema(BaseModel):
     nodes: List[RippleNodeSchema]
     links: List[RippleLinkSchema]
+
+# --- Policy Bundling ---
+class PolicyBundleItem(BaseModel):
+    policy_id: str
+    parameters: Dict[str, Any]
+
+class BundledSimulationRunRequest(BaseModel):
+    city_id: int
+    bundles: List[PolicyBundleItem] = Field(..., min_items=2, description="At least two policies to bundle")
+
+class SynergyConflictItem(BaseModel):
+    type: str  # "synergy" or "conflict"
+    title: str
+    description: str
+    affected_sectors: List[str]
+    magnitude: float  # score delta effect
+
+class BundledSimulationRunResponse(BaseModel):
+    simulation_id: str
+    city_name: str
+    bundled_policies: List[str]
+    all_parameters: Dict[str, Any]
+    run_date: datetime
+    final_scores: Dict[str, float]
+    baseline_scores: Dict[str, float]
+    single_policy_benchmarks: Dict[str, Dict[str, float]]
+    synergies_and_conflicts: List[SynergyConflictItem]
+    projections: List[Dict[str, Any]]
+    agent_reports: List[AgentReportResponse]
+    ripple_graph: RippleGraphSchema
+
+# --- Simulation Run ---
+class SimulationRunRequest(BaseModel):
+    city_id: int = Field(..., description="ID of the baseline city to simulate")
+    policy_id: str = Field(..., description="ID of the policy to apply")
+    parameters: Dict[str, Any] = Field(..., description="Key-value parameters (sliders) for the policy")
 
 class SimulationRunResponse(BaseModel):
     simulation_id: str

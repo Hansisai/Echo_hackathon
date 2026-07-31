@@ -10,13 +10,16 @@ from typing import List
 
 from backend.app.database import get_db
 from backend.app.models import City, Policy, SimulationRun, AgentReport
-from backend.app.engine.policy_engine import calculate_simulation
-from backend.app.agents.manager import run_all_agents
+from backend.app.engine.policy_engine import calculate_simulation, calculate_bundled_simulation
+from backend.app.agents.manager import run_all_agents, run_all_bundled_agents
 from backend.app.schemas import (
     SimulationRunRequest, 
     SimulationRunResponse, 
     SimulationHistoryItem,
-    AgentReportResponse
+    AgentReportResponse,
+    BundledSimulationRunRequest,
+    BundledSimulationRunResponse,
+    SynergyConflictItem
 )
 
 router = APIRouter(prefix="/simulations", tags=["Simulations"])
@@ -126,6 +129,119 @@ def run_simulation(payload: SimulationRunRequest, db: Session = Depends(get_db))
         ripple_graph=engine_results["ripple_graph"]
     )
 
+@router.post("/run-bundle", response_model=BundledSimulationRunResponse)
+def run_bundled_simulation(payload: BundledSimulationRunRequest, db: Session = Depends(get_db)):
+    """
+    Triggers a multi-policy joint impact simulation with synergy/conflict interaction math.
+    """
+    city = db.query(City).filter(City.id == payload.city_id).first()
+    if not city:
+        raise HTTPException(status_code=404, detail="Selected city baseline profile not found.")
+
+    if len(payload.bundles) < 2:
+        raise HTTPException(status_code=400, detail="Policy bundling requires selecting at least 2 active policies.")
+
+    city_dict = {
+        "id": city.id,
+        "name": city.name,
+        "population": city.population,
+        "transit_share": city.transit_share,
+        "avg_commute_dist": city.avg_commute_dist,
+        "co2_baseline": city.co2_baseline,
+        "aqi_baseline": city.aqi_baseline,
+        "median_income": city.median_income,
+        "health_index": city.health_index,
+        "municipal_budget": city.municipal_budget,
+        "satisfaction_baseline": city.satisfaction_baseline
+    }
+
+    policy_ids = [b.policy_id for b in payload.bundles]
+    policies = db.query(Policy).filter(Policy.id.in_(policy_ids)).all()
+    policy_map = {p.id: p.name for p in policies}
+    policy_names = [policy_map.get(pid, pid.replace("_", " ").title()) for pid in policy_ids]
+
+    bundle_dicts = [{"policy_id": b.policy_id, "parameters": b.parameters} for b in payload.bundles]
+    all_params = {}
+    for b in payload.bundles:
+        all_params[b.policy_id] = b.parameters
+
+    engine_results = calculate_bundled_simulation(city_dict, bundle_dicts)
+
+    agent_outputs = run_all_bundled_agents(
+        city_name=city.name,
+        city_stats=city_dict,
+        policy_names=policy_names,
+        all_parameters=all_params,
+        engine_results=engine_results,
+        synergies_conflicts=engine_results["synergies_and_conflicts"]
+    )
+
+    run_id = f"bundle_{uuid.uuid4().hex[:8]}"
+    run_date = datetime.utcnow()
+
+    db_run = SimulationRun(
+        id=run_id,
+        city_id=city.id,
+        policy_id=None,
+        parameters=json.dumps(all_params),
+        run_date=run_date,
+        final_scores=json.dumps(engine_results["final_scores"]),
+        projections=json.dumps(engine_results["projections"]),
+        ripple_graph=json.dumps(engine_results["ripple_graph"])
+    )
+    db.add(db_run)
+
+    for out in agent_outputs:
+        report_row = AgentReport(
+            run_id=run_id,
+            agent_name=out["agent_name"],
+            transcript=out["transcript"],
+            score=out["score"],
+            sentiment=out["sentiment"]
+        )
+        db.add(report_row)
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database commit failed: {e}")
+
+    synergies_conflicts_schema = [
+        SynergyConflictItem(
+            type=item["type"],
+            title=item["title"],
+            description=item["description"],
+            affected_sectors=item["affected_sectors"],
+            magnitude=item["magnitude"]
+        ) for item in engine_results["synergies_and_conflicts"]
+    ]
+
+    return BundledSimulationRunResponse(
+        simulation_id=run_id,
+        city_name=city.name,
+        bundled_policies=policy_names,
+        all_parameters=all_params,
+        run_date=run_date,
+        final_scores=engine_results["final_scores"],
+        baseline_scores=engine_results["baseline_scores"],
+        single_policy_benchmarks=engine_results["single_policy_benchmarks"],
+        synergies_and_conflicts=synergies_conflicts_schema,
+        projections=engine_results["projections"],
+        agent_reports=[
+            AgentReportResponse(
+                agent_name=out["agent_name"],
+                transcript=out["transcript"],
+                score=out["score"],
+                sentiment=out["sentiment"],
+                risks=out["risks"],
+                mitigations=out["mitigations"]
+            )
+            for out in agent_outputs
+        ],
+        ripple_graph=engine_results["ripple_graph"]
+    )
+
 @router.get("/history", response_model=List[SimulationHistoryItem])
 def get_history(db: Session = Depends(get_db)):
     """
@@ -134,10 +250,11 @@ def get_history(db: Session = Depends(get_db)):
     runs = db.query(SimulationRun).order_by(SimulationRun.run_date.desc()).all()
     history = []
     for r in runs:
+        pol_name = r.policy.name if r.policy else "Joint Policy Bundle"
         history.append(SimulationHistoryItem(
             id=r.id,
             city_name=r.city.name,
-            policy_name=r.policy.name,
+            policy_name=pol_name,
             run_date=r.run_date,
             final_scores=json.loads(r.final_scores)
         ))
@@ -183,10 +300,11 @@ def get_simulation_run(run_id: str, db: Session = Depends(get_db)):
             mitigations=mitigations_data.get(r.agent_name, [])
         ))
 
+    policy_name = run.policy.name if run.policy else "Joint Policy Bundle"
     return SimulationRunResponse(
         simulation_id=run.id,
         city_name=run.city.name,
-        policy_name=run.policy.name,
+        policy_name=policy_name,
         parameters=json.loads(run.parameters),
         run_date=run.run_date,
         final_scores=json.loads(run.final_scores),
@@ -219,6 +337,7 @@ def export_simulation(run_id: str, format: str = "json", db: Session = Depends(g
     params = json.loads(run.parameters)
     scores = json.loads(run.final_scores)
     projections = json.loads(run.projections)
+    policy_title = run.policy.name if run.policy else "Joint Policy Bundle"
     
     if format == "html":
         # Calculate overall score and grade
@@ -429,7 +548,7 @@ def export_simulation(run_id: str, format: str = "json", db: Session = Depends(g
 <body>
     <div class="header">
         <span class="report-subtitle">Living Policy Simulator Executive Report</span>
-        <h1>{run.policy.name}</h1>
+        <h1>{policy_title}</h1>
         <div style="font-size: 12px; color: #9ca3af;">Applied to <strong>{run.city.name}</strong> • ID: {run.id} • {run.run_date.strftime('%Y-%m-%d %H:%M')}</div>
     </div>
 
@@ -496,7 +615,7 @@ def export_simulation(run_id: str, format: str = "json", db: Session = Depends(g
             "generated_at": run.run_date.isoformat(),
             "metadata": {
                 "city": run.city.name,
-                "policy": run.policy.name,
+                "policy": policy_title,
                 "applied_parameters": params
             },
             "scores": scores,

@@ -46,6 +46,7 @@ export const api = {
 
   // Policies
   getPolicies: () => request("/policies"),
+  getPolicyDigests: (status = "all") => request(`/policies/digest?status=${status}`),
 
   // Simulations
   runSimulation: (cityId, policyId, parameters) => request("/simulations/run", {
@@ -54,6 +55,13 @@ export const api = {
       city_id: cityId,
       policy_id: policyId,
       parameters
+    })
+  }),
+  runBundledSimulation: (cityId, bundles) => request("/simulations/run-bundle", {
+    method: "POST",
+    body: JSON.stringify({
+      city_id: cityId,
+      bundles
     })
   }),
   getHistory: () => request("/simulations/history"),

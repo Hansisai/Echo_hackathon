@@ -5,7 +5,7 @@ from backend.app.api import cities, policies, simulations
 
 app = FastAPI(
     title="Living Policy Simulator API",
-    description="Backend decision engine and multi-agent simulation coordinator powered by Featherless AI & SQLite.",
+    description="Backend decision engine and multi-agent simulation coordinator powered by Gemini & SQLite.",
     version="1.0.0"
 )
 

@@ -5,6 +5,8 @@ import ConsoleLoader from './components/ConsoleLoader';
 
 // Pages
 import PolicySimulator from './pages/PolicySimulator';
+import PolicyBundling from './pages/PolicyBundling';
+import CivicDigest from './pages/CivicDigest';
 import Dashboard from './pages/Dashboard';
 import Comparison from './pages/Comparison';
 import Reports from './pages/Reports';
@@ -67,10 +69,12 @@ export default function App() {
     setIsSimulating(true);
   };
 
-  const handleSimulationSuccess = (runResult) => {
+  const handleSimulationSuccess = (runResult, shouldRedirect = true) => {
     setCurrentRun(runResult);
     setIsSimulating(false);
-    setActiveTab('dashboard'); // redirect to dashboard to see results
+    if (shouldRedirect) {
+      setActiveTab('dashboard'); // redirect to single policy dashboard
+    }
   };
 
   const handleViewHistoricRun = async (runId) => {
@@ -100,6 +104,16 @@ export default function App() {
             onSimulationSuccess={handleSimulationSuccess}
           />
         );
+      case 'bundling':
+        return (
+          <PolicyBundling
+            selectedCityId={selectedCityId}
+            onSimulationStart={handleSimulationStart}
+            onSimulationSuccess={handleSimulationSuccess}
+          />
+        );
+      case 'digest':
+        return <CivicDigest />;
       case 'dashboard':
         return (
           <Dashboard
@@ -127,6 +141,10 @@ export default function App() {
     switch (activeTab) {
       case 'simulator':
         return 'Policy Simulation Lab';
+      case 'bundling':
+        return 'Policy Bundling & Synergy Playground';
+      case 'digest':
+        return 'Civic Policy Digest & Transparency Portal';
       case 'dashboard':
         return 'Multi-Sector Insights Dashboard';
       case 'comparison':

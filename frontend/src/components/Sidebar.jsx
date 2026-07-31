@@ -5,12 +5,16 @@ import {
   GitCompare, 
   ClipboardList, 
   Database,
-  Sparkles
+  Sparkles,
+  Layers,
+  BookOpen
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const menuItems = [
     { id: 'simulator', label: 'Policy Simulator', icon: Sliders },
+    { id: 'bundling', label: 'Policy Bundles', icon: Layers },
+    { id: 'digest', label: 'Civic Digest', icon: BookOpen },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'comparison', label: 'Comparison', icon: GitCompare },
     { id: 'reports', label: 'Reports & History', icon: ClipboardList },

@@ -77,3 +77,38 @@ def compile_user_prompt(city_name: str, city_stats: dict, policy_name: str, para
 
     Review the details and calculate your sector's response. Return your response in the specified JSON structure.
     """
+
+
+def compile_bundled_user_prompt(city_name: str, city_stats: dict, policy_names: list, all_parameters: dict, engine_results: dict, synergies_conflicts: list) -> str:
+    """
+    Constructs input context for the agent evaluating a multi-policy bundle.
+    """
+    policies_str = ", ".join(policy_names)
+    syn_str = "\n".join([f"- [{item['type'].upper()}] {item['title']}: {item['description']}" for item in synergies_conflicts]) if synergies_conflicts else "None detected"
+
+    return f"""
+    City Context:
+    - Name: {city_name}
+    - Population: {city_stats.get('population')}
+    - Median Income: ${city_stats.get('median_income')}/yr
+    - Transit Share: {city_stats.get('transit_share')}%
+    - Municipal Budget: ${city_stats.get('municipal_budget')}M/yr
+    - AQI Baseline: {city_stats.get('aqi_baseline')}
+
+    Proposed Policy Bundle:
+    - Combined Policies: {policies_str}
+    - All Applied Parameters: {all_parameters}
+
+    Quantitative Calculations (Joint Simulation Projections):
+    - Economy End Score: {engine_results['final_scores']['economy']}
+    - Environment End Score: {engine_results['final_scores']['environment']}
+    - Mobility End Score: {engine_results['final_scores']['mobility']}
+    - Equity End Score: {engine_results['final_scores']['equity']}
+    - Health End Score: {engine_results['final_scores']['health']}
+
+    Detected Interaction Dynamics (Synergies & Conflicts):
+    {syn_str}
+
+    Review the joint package impact and return your sector's response in the specified JSON structure.
+    """
+
