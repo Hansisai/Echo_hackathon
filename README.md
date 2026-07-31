@@ -26,26 +26,32 @@ An advanced, AI-powered multi-agent policy simulation platform designed for city
   - Reviews outputs from all 6 sector advisors.
   - Identifies consensus points and inter-sectoral conflicts.
   - Applies weighted scoring and formulates a final decision (*Approve, Reject, Modify, Bundle*).
-  - Assigns a confidence score (0–100%) and outlines alternative strategic pathways.
+  - Assigns a confidence score (0.0–1.0 float / 0–100%) and outlines alternative strategic pathways.
 
 ### 3. ⚡ Multi-Policy Bundling & Synergy Engine
 - Interactively test multi-policy combinations (e.g. *Congestion Toll + Metro Fare Subsidy*).
 - Automatic detection of **Positive Synergies** (e.g., +15% mobility boost) and **Negative Conflicts** (e.g., doubled low-income cost strain).
 - Interactive combined **Directed Acyclic Graph (DAG)** showing causal ripple effects across urban systems.
 
-### 4. 📢 Civic Transparency Digest
+### 4. 🔄 Scenario Comparison Center
+- Side-by-side comparative matrix across Economy, Environment, Mobility, Equity, and Health indices.
+- Executive Comparative Synthesis Verdicts highlighting overall efficiency leads and margin deltas.
+- Side-by-side 5-Year Trend Outlook line charts and 5-sector multi-dimensional balance radar charts.
+- Side-by-side Athena Meta-Decision executive summaries and advisor deliberation comparisons.
+
+### 5. 📢 Civic Transparency Digest
 - Infographic policy cards designed for citizens, explaining policy purpose, mechanisms, advantages, and risks in plain, non-technical language.
 - **Multilingual Support**: Switch seamlessly between English, Spanish, French, and Hindi.
 - **Voice Narration**: Native Web Speech API text-to-speech for hands-free audio listening.
 - **Status Filtering**: Filter by Active Policies vs. Historical Expired Policy Archive.
 
-### 5. 📑 Executive Reports & Multi-Format Exports
+### 6. 📑 Executive Reports & Multi-Format Exports
 - One-click export of complete executive HTML simulation reports.
 - Export detailed 5-year sector projections as raw CSV datasets for spreadsheet modeling.
 - Comprehensive report history registry.
 
-### 6. 🎨 Dual-Theme Support (Dark & Light Mode)
-- Built with a glassmorphism design system.
+### 7. 🎨 Dual-Theme Support (Dark & Light Mode)
+- Built with a responsive glassmorphism design system.
 - Includes a 1-click **Light Mode / Dark Mode** theme switcher with persistent local storage.
 
 ---
@@ -138,6 +144,7 @@ Frontend Web App will be live at: `http://localhost:5173`
 | `POST` | `/api/simulations/run` | Execute single-policy 5-year simulation |
 | `POST` | `/api/simulations/run-bundle` | Execute multi-policy joint simulation with synergy engine |
 | `GET` | `/api/simulations/history` | Retrieve historic simulation runs |
+| `GET` | `/api/simulations/{id}` | Retrieve detail report for a single saved simulation run |
 | `GET` | `/api/simulations/{id}/export?format=html` | Export executive HTML or CSV report |
 
 ---
