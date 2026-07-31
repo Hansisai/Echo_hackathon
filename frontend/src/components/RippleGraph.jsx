@@ -95,8 +95,6 @@ export default function RippleGraph({ graphData }) {
     if (type === 'origin') return 'var(--accent)';
     if (type === 'positive') return 'var(--color-environment)';
     if (type === 'negative') return 'var(--color-equity)';
-    if (type === 'synergy') return '#10b981';
-    if (type === 'conflict') return '#f43f5e';
     return 'var(--text-muted)';
   };
 
@@ -114,33 +112,25 @@ export default function RippleGraph({ graphData }) {
       }}
     >
       {/* Title & Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Cause & Effect Causal Graph</h3>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Visualize direct effects, cascading impacts, and multi-policy synergy/conflict nodes.</p>
+          <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Cause & Effect Chain</h3>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>See how a single policy decision triggers cascading positive or negative side-effects.</p>
         </div>
         
         {/* Legend */}
-        <div style={{ display: 'flex', gap: '14px', fontSize: '11px', fontWeight: 500, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '16px', fontSize: '11px', fontWeight: 500 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent)', boxShadow: '0 0 8px var(--accent-glow)' }}></span>
-            <span>Origin</span>
+            <span>Policy Origin</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-environment)' }}></span>
-            <span>Positive Impact</span>
+            <span>Positive Outcome</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-equity)' }}></span>
-            <span>Risk / Negative</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 8px rgba(16,185,129,0.5)' }}></span>
-            <span>Synergy Interaction</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f43f5e', boxShadow: '0 0 8px rgba(244,63,94,0.5)' }}></span>
-            <span>Conflict Trade-off</span>
+            <span>Risk / Negative Outcome</span>
           </div>
         </div>
       </div>

@@ -32,14 +32,6 @@ class Policy(Base):
     default_value = Column(Float, nullable=False)
     unit = Column(String(20), nullable=False)
 
-    # Civic Digest fields
-    purpose = Column(Text, nullable=True)
-    mechanism = Column(Text, nullable=True)
-    advantages = Column(Text, nullable=True)  # JSON string list of advantages
-    risks = Column(Text, nullable=True)       # JSON string list of risks
-    status = Column(String(20), nullable=False, default="active") # active / expired
-    category = Column(String(50), nullable=False, default="Urban Planning")
-
     runs = relationship("SimulationRun", back_populates="policy")
 
 
@@ -48,7 +40,7 @@ class SimulationRun(Base):
 
     id = Column(String(50), primary_key=True, index=True)
     city_id = Column(Integer, ForeignKey("cities.id"), nullable=False)
-    policy_id = Column(String(50), ForeignKey("policies.id"), nullable=True)
+    policy_id = Column(String(50), ForeignKey("policies.id"), nullable=False)
     parameters = Column(Text, nullable=False)  # JSON string of applied parameters
     run_date = Column(DateTime, nullable=False)
     final_scores = Column(Text, nullable=False)  # JSON string: {economy: x, environment: y, ...}

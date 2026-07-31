@@ -201,10 +201,10 @@ export default function Dashboard({ runData, activeCity }) {
         <div>
           <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Active Simulation Report</span>
           <h2 style={{ fontSize: '18px', fontWeight: 600, marginTop: '2px' }}>
-            {runData.policy_name || 'Joint Policy Bundle'} applied to {runData.city_name}
+            {runData.policy_name} applied to {runData.city_name}
           </h2>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Parameters: {typeof parameters === 'object' && parameters !== null ? Object.entries(parameters).map(([k, v]) => typeof v === 'object' ? `${k.replace('_', ' ')}: ${JSON.stringify(v)}` : `${k.replace('_', ' ')}: ${v}`).join(' | ') : ''}
+            Parameters: {Object.entries(parameters).map(([k, v]) => `${k.replace('_', ' ')}: ${v}`).join(' | ')}
           </p>
         </div>
 

@@ -1,0 +1,24 @@
+# Python virtual environments
+.venv/
+backend/.venv/
+venv/
+ENV/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node dependencies
+node_modules/
+frontend/node_modules/
+
+# Databases
+*.db
+database.db
+
+# System/IDE files
+.DS_Store
+.vscode/
+.idea/
